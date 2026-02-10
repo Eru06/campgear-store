@@ -28,5 +28,13 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 
-# Node (for frontend later)
+# TLS certificates and private keys
+certs/
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Node
 node_modules/

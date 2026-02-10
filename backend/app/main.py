@@ -13,12 +13,14 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s — %(message)s",
 )
 
+_is_dev = settings.app_env == "development"
+
 app = FastAPI(
     title="CampGear Store API",
     version="0.1.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    docs_url="/api/docs" if _is_dev else None,
+    redoc_url="/api/redoc" if _is_dev else None,
+    openapi_url="/api/openapi.json" if _is_dev else None,
 )
 
 # CORS

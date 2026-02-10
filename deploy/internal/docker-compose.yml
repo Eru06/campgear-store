@@ -1,5 +1,7 @@
-# Internal zone VM — backend API + database
-# Deploy on VM 2 (10.10.2.x)
+# Internal zone — E-commerce App/DB Server
+# Deploy on Proxmox VM at 192.168.1.30 (Inside network 192.168.1.0/24)
+# Backend port 8000 accessible from DMZ (192.168.2.10) via Palo Alto FW
+# Database is isolated — only reachable from backend container via Docker network
 
 services:
   db:
@@ -10,8 +12,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    # Only listen on internal network — NOT exposed to host
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - internal
     healthcheck:
@@ -21,6 +22,9 @@ services:
       retries: 10
 
   backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: campgear-backend:latest
     environment:
       DATABASE_URL: postgresql+asyncpg://campgear:${DB_PASSWORD}@db:5432/campgear
@@ -30,7 +34,7 @@ services:
       LOG_LEVEL: INFO
       UPLOAD_DIR: /data/uploads
     ports:
-      # Accessible from DMZ Nginx at 10.10.2.x:8000
+      # Accessible from DMZ Nginx (192.168.2.10) through Palo Alto FW
       - "8000:8000"
     volumes:
       - uploads:/data/uploads

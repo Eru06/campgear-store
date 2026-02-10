@@ -2,11 +2,11 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Database
-    database_url: str = "postgresql+asyncpg://campgear:changeme@localhost:5432/campgear"
+    # Database — must be set via .env or environment variable
+    database_url: str
 
-    # JWT
-    jwt_secret_key: str = "CHANGE-ME"
+    # JWT — must be set via .env or environment variable (no default = fail-safe)
+    jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
