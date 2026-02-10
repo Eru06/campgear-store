@@ -1,0 +1,49 @@
+# Internal zone VM — backend API + database
+# Deploy on VM 2 (10.10.2.x)
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campgear
+      POSTGRES_USER: campgear
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # Only listen on internal network — NOT exposed to host
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campgear"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    image: campgear-backend:latest
+    environment:
+      DATABASE_URL: postgresql+asyncpg://campgear:${DB_PASSWORD}@db:5432/campgear
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      UPLOAD_DIR: /data/uploads
+    ports:
+      # Accessible from DMZ Nginx at 10.10.2.x:8000
+      - "8000:8000"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  pgdata:
+  uploads:

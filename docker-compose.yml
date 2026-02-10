@@ -1,0 +1,46 @@
+# Local development — runs all services on one machine.
+# Usage: docker compose up --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campgear
+      POSTGRES_USER: campgear
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campgear"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://campgear:${DB_PASSWORD:-changeme}@db:5432/campgear
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-dev-secret-change-in-production-64chars-minimum-length-ok}
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:80"
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0 --port 8000
+      --reload
+
+volumes:
+  pgdata:
+  uploads:
