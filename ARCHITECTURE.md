@@ -1,6 +1,6 @@
 # CampGear Store — Architecture Overview
 
-## Network Topology (Based on Network Diagram v3 — Team D)
+## Network Topology (Based on Network Diagram v7 — Team D)
 
 ```
                          ┌──────────────┐
@@ -8,7 +8,7 @@
                          └──────┬───────┘
                                 │
                     NAT/PAT (172.31.26.186/29)
-                    172.31.26.187:80,443 → 192.168.2.10:80,443
+                    172.31.26.186:80,443 → 192.168.2.10:80,443
                                 │
 ┌───────────────────────────────┼──────────────────────────────────────┐
 │                        Proxmox PVE Host                              │
@@ -19,7 +19,7 @@
 │   │  Outside: 172.31.26.186/29                                  │     │
 │   │  Inside:  192.168.1.1/24                                    │     │
 │   │  DMZ:     192.168.2.1/24                                    │     │
-│   │  Mgmt:    192.168.3.1/24                                    │     │
+│   │  Mgmt:    192.168.3.5/24                                    │     │
 │   └──────┬──────────────────────────┬──────────────────────────┘     │
 │          │ Inside                   │ DMZ                            │
 │          ▼                          ▼                                │
@@ -38,47 +38,59 @@
 │   │ └───────────────┘│    │ └──────────────────────────┘ │          │
 │   │                   │    │                              │          │
 │   │ Other servers:    │    │ Other servers:               │          │
-│   │  DC/DNS .1.10    │    │  Email GW   .2.20           │          │
-│   │  Mail   .1.20    │    │  Public DNS .2.30           │          │
-│   │  SecOnion .1.40  │    │  SecOnion   .2.40           │          │
-│   │  Wazuh  .1.50    │    │                              │          │
-│   └──────────────────┘    └──────────────────────────────┘          │
+│   │  DC/DNS  .1.10   │    │  Mail Server  .2.20          │          │
+│   │  IAM     .1.11   │    │  Primary DNS  .2.30          │          │
+│   │  SecOnion/Mgmt   │    │  Secondary DNS .2.31         │          │
+│   │    .1.40         │    │                              │          │
+│   │  SecOnion/Search │    └──────────────────────────────┘          │
+│   │    .1.60         │                                               │
+│   │  SecOnion/Sensor │                                               │
+│   │    .1.70         │                                               │
+│   │  User VLANs      │                                               │
+│   └──────────────────┘                                               │
 │                                                                      │
 │   ┌──────────────────────────────────────────────┐                   │
 │   │ MANAGEMENT ZONE (192.168.3.0/24)              │                   │
-│   │  Proxmox Mgmt  .3.101                         │                   │
-│   │  IAM Server    .3.11                           │                   │
-│   │  Palo Alto Mgmt .3.1                           │                   │
+│   │  Proxmox Host Mgmt  .3.101                    │                   │
+│   │  Palo Alto Mgmt     .3.5                      │                   │
 │   └──────────────────────────────────────────────┘                   │
+│                                                                      │
+│   EXTERNAL NETWORK                                                   │
+│   External Pen-Test Machine: 172.31.26.187                           │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## IP Address Summary
 
-| Host                  | Zone       | IP Address      | Purpose                  |
-|-----------------------|------------|-----------------|--------------------------|
-| E-commerce Web        | DMZ        | 192.168.2.10    | Nginx + React frontend   |
-| E-commerce App/DB     | Inside     | 192.168.1.30    | FastAPI + PostgreSQL     |
-| Palo Alto FW (DMZ)    | —          | 192.168.2.1     | Gateway for DMZ zone     |
-| Palo Alto FW (Inside) | —          | 192.168.1.1     | Gateway for Inside zone  |
-| Palo Alto FW (Outside)| —          | 172.31.26.186   | Internet-facing          |
-| Proxmox Host Mgmt     | Management | 192.168.3.101   | Hypervisor management    |
-| Domain Controller/DNS | Inside     | 192.168.1.10    | AD + Internal DNS        |
-| Mail Server           | Inside     | 192.168.1.20    | Mailbox/IMAP             |
-| Security Onion        | Inside     | 192.168.1.40    | IDS/IPS management       |
-| Wazuh Server          | Inside     | 192.168.1.50    | HIDS/SIEM               |
-| Email Gateway         | DMZ        | 192.168.2.20    | SMTP relay               |
-| Public DNS            | DMZ        | 192.168.2.30    | External DNS             |
-| Security Onion Sensor | DMZ        | 192.168.2.40    | Network sensor           |
+| Host                    | Zone       | IP Address      | Purpose                  |
+|-------------------------|------------|-----------------|--------------------------|
+| E-commerce Web          | DMZ        | 192.168.2.10    | Nginx + React frontend   |
+| E-commerce App/DB       | Inside     | 192.168.1.30    | FastAPI + PostgreSQL     |
+| Palo Alto FW (DMZ)      | —          | 192.168.2.1     | Gateway for DMZ zone     |
+| Palo Alto FW (Inside)   | —          | 192.168.1.1     | Gateway for Inside zone  |
+| Palo Alto FW (Outside)  | —          | 172.31.26.186   | Internet-facing          |
+| Palo Alto FW (Mgmt)     | Management | 192.168.3.5     | Firewall management      |
+| Proxmox Host Mgmt       | Management | 192.168.3.101   | Hypervisor management    |
+| Domain Controller/DNS   | Inside     | 192.168.1.10    | AD + Internal DNS        |
+| IAM Server              | Inside     | 192.168.1.11    | Identity & Access Mgmt   |
+| Security Onion / Mgmt   | Inside     | 192.168.1.40    | IDS/IPS management       |
+| Security Onion / Search | Inside     | 192.168.1.60    | Log search (Kibana)      |
+| Security Onion / Sensor | Inside     | 192.168.1.70    | Network sensor           |
+| Mail Server             | DMZ        | 192.168.2.20    | SMTP/IMAP                |
+| Primary DNS             | DMZ        | 192.168.2.30    | External DNS             |
+| Secondary DNS           | DMZ        | 192.168.2.31    | External DNS (redundant) |
+| External Pen-Test       | External   | 172.31.26.187   | Security testing         |
 
 ## NAT/PAT Rules (Palo Alto)
 
-| Public IP:Port              | Direction | Internal IP:Port     | Service         |
-|-----------------------------|-----------|----------------------|-----------------|
-| 172.31.26.187:80,443        | Inbound   | 192.168.2.10:80,443  | E-commerce Web  |
-| 172.31.26.188:25,587        | Inbound   | 192.168.2.20:25,587  | Email Gateway   |
-| 172.31.26.189:53 TCP/UDP    | Inbound   | 192.168.2.30:53      | Public DNS      |
-| Inside/DMZ → 172.31.26.186  | Outbound  | —                    | Outbound NAT    |
+| Public IP:Port              | Direction | Internal IP:Port     | Service              |
+|-----------------------------|-----------|----------------------|----------------------|
+| 172.31.26.186:80,443        | Inbound   | 192.168.2.10:80,443  | E-commerce Web       |
+| 172.31.26.188:80,443        | Inbound   | 192.168.2.20:80,443  | Mail Server HTTP     |
+| 172.31.26.188:25,587        | Inbound   | 192.168.2.20:25,587  | Mail Server SMTP     |
+| 172.31.26.189:53 TCP/UDP    | Inbound   | 192.168.2.30:53      | Primary DNS          |
+| 172.31.26.190:53 TCP/UDP    | Inbound   | 192.168.2.31:53      | Secondary DNS        |
+| Inside/DMZ → 172.31.26.186  | Outbound  | —                    | Outbound NAT         |
 
 ## Services Summary
 
@@ -123,7 +135,7 @@ We use **two separate docker-compose files**, one per VM:
 ## Data Flow
 
 ```
-Browser → Internet → Palo Alto NAT (172.31.26.187)
+Browser → Internet → Palo Alto NAT (172.31.26.186)
   → 192.168.2.10:80 Nginx (TLS termination)
     → GET /              → serve React SPA (index.html + JS bundle)
     → GET /api/products  → proxy_pass → Palo Alto FW → 192.168.1.30:8000
@@ -161,4 +173,4 @@ JWT chosen over session cookies because:
 - Passwords hashed with bcrypt (via passlib)
 - Access tokens: short-lived (30 min)
 - Refresh tokens: longer-lived (7 days), stored in DB for revocation
-- Security monitoring: Wazuh (192.168.1.50) + Security Onion (192.168.1.40 / 192.168.2.40)
+- Security monitoring: Security Onion (.1.40 Mgmt / .1.60 Search / .1.70 Sensor)

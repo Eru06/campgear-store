@@ -1,6 +1,6 @@
 # DMZ zone — E-commerce Web Server
 # Deploy on Proxmox VM at 192.168.2.10 (DMZ network 192.168.2.0/24)
-# NAT/PAT: 172.31.26.187:80,443 → 192.168.2.10:80,443
+# NAT/PAT: 172.31.26.186:80,443 → 192.168.2.10:80,443
 # Reverse proxies API calls to Internal zone: 192.168.1.30:8000
 
 services:

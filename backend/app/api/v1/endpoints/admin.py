@@ -21,6 +21,16 @@ from app.schemas.order import (
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+# Allowed order status transitions for lifecycle enforcement.
+ALLOWED_STATUS_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
+    OrderStatus.PENDING_PAYMENT: {OrderStatus.PLACED, OrderStatus.CANCELLED},
+    OrderStatus.PLACED: {OrderStatus.PROCESSING, OrderStatus.CANCELLED},
+    OrderStatus.PROCESSING: {OrderStatus.SHIPPED, OrderStatus.CANCELLED},
+    OrderStatus.SHIPPED: {OrderStatus.DELIVERED},
+    OrderStatus.DELIVERED: set(),
+    OrderStatus.CANCELLED: set(),
+}
+
 
 @router.get("/orders", response_model=ApiResponse)
 async def list_all_orders(
@@ -99,6 +109,16 @@ async def update_order_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
     old_status = order.status
+    if body.status == old_status:
+        return ApiResponse(data=OrderResponse.model_validate(order))
+
+    allowed = ALLOWED_STATUS_TRANSITIONS.get(old_status, set())
+    if body.status not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status transition: {old_status.value} -> {body.status.value}",
+        )
+
     order.status = body.status
 
     # Audit log

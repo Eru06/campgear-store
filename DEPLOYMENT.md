@@ -12,7 +12,7 @@
 ## Network Overview
 
 ```
-Internet → 172.31.26.187:80,443
+Internet → 172.31.26.186:80,443
   → Palo Alto NAT → 192.168.2.10:80,443 (DMZ - Nginx + React)
     → Palo Alto FW rule → 192.168.1.30:8000 (Inside - FastAPI + PostgreSQL)
 ```
@@ -28,7 +28,15 @@ Configure these rules on the Palo Alto FW before deploying:
 ### NAT Rules
 ```
 # Inbound NAT for web traffic
-Source: any  →  Dest: 172.31.26.187:80,443  →  Translate to: 192.168.2.10:80,443
+Source: any  →  Dest: 172.31.26.186:80,443  →  Translate to: 192.168.2.10:80,443
+
+# Inbound NAT for mail server
+Source: any  →  Dest: 172.31.26.188:80,443  →  Translate to: 192.168.2.20:80,443
+Source: any  →  Dest: 172.31.26.188:25,587  →  Translate to: 192.168.2.20:25,587
+
+# Inbound NAT for DNS
+Source: any  →  Dest: 172.31.26.189:53 TCP/UDP  →  Translate to: 192.168.2.30:53
+Source: any  →  Dest: 172.31.26.190:53 TCP/UDP  →  Translate to: 192.168.2.31:53
 
 # Outbound NAT for DMZ/Inside internet access (package downloads)
 Source: 192.168.1.0/24, 192.168.2.0/24  →  Translate to: 172.31.26.186
@@ -165,31 +173,31 @@ curl http://localhost/api/v1/categories
 
 ## Step 4: End-to-End Verification
 
-### From External Pen-Test Machine (172.31.26.190) or any external host:
+### From External Pen-Test Machine (172.31.26.187) or any external host:
 
 ```bash
 # 1. Load the web frontend
-curl http://172.31.26.187/
+curl http://172.31.26.186/
 # Should return React SPA HTML
 
 # 2. API call through the full chain
-curl http://172.31.26.187/api/v1/products
+curl http://172.31.26.186/api/v1/products
 # Should return product JSON
 
 # 3. Register a user
-curl -X POST http://172.31.26.187/api/v1/auth/register \
+curl -X POST http://172.31.26.186/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Test1234!","full_name":"Test User"}'
 
 # 4. Login
-curl -X POST http://172.31.26.187/api/v1/auth/login \
+curl -X POST http://172.31.26.186/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Test1234!"}'
 # Should return access_token + refresh_token
 ```
 
 ### From a browser:
-1. Open `http://172.31.26.187` (or the DNS name if configured)
+1. Open `http://172.31.26.186` (or the DNS name if configured)
 2. Register a new user
 3. Browse products, add to cart, checkout
 4. Login as admin: `admin@campgear.com` / `Admin123!`
@@ -206,8 +214,8 @@ nc -zv 192.168.1.30 5432    # Should FAIL (blocked by Palo Alto)
 nc -zv 192.168.1.30 8000    # Should SUCCEED (allowed by rule #2)
 
 # Verify DB is NOT reachable from internet
-# From 172.31.26.190:
-nc -zv 172.31.26.187 5432   # Should FAIL (no NAT rule)
+# From pen-test machine 172.31.26.187:
+nc -zv 172.31.26.186 5432   # Should FAIL (no NAT rule)
 nc -zv 192.168.1.30 5432    # Should FAIL (not routable)
 ```
 
@@ -249,7 +257,7 @@ nc -zv 192.168.1.30 5432    # Should FAIL (not routable)
 | `502 Bad Gateway` from Nginx | Backend not running on 192.168.1.30, or wrong IP in nginx.conf |
 | DB connection refused | Check `DB_PASSWORD` matches in `.env`, run `docker compose logs db` |
 | CORS errors in browser | Check `CORS_ORIGINS` in Internal `.env` includes `http://192.168.2.10` |
-| Can't reach site from internet | Palo Alto NAT rule missing: 172.31.26.187 → 192.168.2.10 |
+| Can't reach site from internet | Palo Alto NAT rule missing: 172.31.26.186 → 192.168.2.10 |
 | Migration fails | Run `docker compose exec backend alembic upgrade head` on Internal VM |
 
 ---

@@ -39,23 +39,41 @@ async def create_order(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Load cart with items and products
-    result = await db.execute(
-        select(Cart)
-        .where(Cart.user_id == user.id)
-        .options(selectinload(Cart.items).selectinload(CartItem.product))
-    )
+    # Lock cart row to avoid concurrent checkout/cart mutations for the same user.
+    result = await db.execute(select(Cart).where(Cart.user_id == user.id).with_for_update())
     cart = result.scalar_one_or_none()
 
-    if cart is None or not cart.items:
+    if cart is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
+
+    # Load cart items with related products.
+    items_result = await db.execute(
+        select(CartItem)
+        .where(CartItem.cart_id == cart.id)
+        .options(selectinload(CartItem.product))
+    )
+    cart_items = items_result.scalars().all()
+    if not cart_items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
+
+    # Lock all products referenced by this cart to make stock checks/decrements atomic.
+    product_ids = sorted({ci.product_id for ci in cart_items}, key=str)
+    products_result = await db.execute(
+        select(Product).where(Product.id.in_(product_ids)).with_for_update()
+    )
+    locked_products = {p.id: p for p in products_result.scalars().all()}
 
     # Validate stock and calculate total
     total = Decimal("0")
     order_items_data = []
 
-    for ci in cart.items:
-        product = ci.product
+    for ci in cart_items:
+        product = locked_products.get(ci.product_id)
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="One or more products in cart no longer exist",
+            )
         if not product.is_active:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

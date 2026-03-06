@@ -38,6 +38,33 @@ def test_admin_update_order_status(client, admin_headers):
     assert r2.json()["data"]["status"] == "placed"
 
 
+def test_admin_rejects_invalid_order_status_transition(client, admin_headers):
+    """Admin cannot apply disallowed status transitions."""
+    r = client.get("/admin/orders", headers=admin_headers)
+    orders = r.json()["data"]["items"]
+    if not orders:
+        return
+    order_id = orders[0]["id"]
+    current = orders[0]["status"]
+
+    disallowed_target = {
+        "pending_payment": "delivered",
+        "placed": "delivered",
+        "processing": "delivered",
+        "shipped": "cancelled",
+        "delivered": "placed",
+        "cancelled": "placed",
+    }[current]
+
+    r2 = client.patch(
+        f"/admin/orders/{order_id}/status",
+        headers=admin_headers,
+        json={"status": disallowed_target},
+    )
+    assert r2.status_code == 400
+    assert "Invalid status transition" in r2.json()["detail"]
+
+
 def test_admin_audit_logs(client, admin_headers):
     """Admin can list audit logs (should have at least the status change)."""
     r = client.get("/admin/audit-logs", headers=admin_headers)
