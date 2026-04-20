@@ -77,6 +77,23 @@ export default function Login() {
       <p className="mt-4 text-center text-sm text-gray-600">
         Don't have an account? <Link to="/register" className="text-green-600 hover:underline">Register</Link>
       </p>
+
+      <div className="mt-6">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-2 text-gray-500">Staff access</span>
+          </div>
+        </div>
+        <a
+          href="/api/v1/auth/sso/login"
+          className="mt-3 w-full flex justify-center items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Sign in with Company Account
+        </a>
+      </div>
     </div>
   );
 }

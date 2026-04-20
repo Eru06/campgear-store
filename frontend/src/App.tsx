@@ -13,6 +13,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
+import SsoCallback from './pages/SsoCallback';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
 import AdminCategories from './pages/admin/Categories';
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/products/:slug" element={<ProductDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/sso-callback" element={<SsoCallback />} />
 
               {/* Customer (protected) */}
               <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
