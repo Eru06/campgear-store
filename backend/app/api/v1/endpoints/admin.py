@@ -146,25 +146,27 @@ async def list_audit_logs(
     total = (await db.execute(count_q)).scalar() or 0
 
     query = (
-        select(AuditLog)
+        select(AuditLog, User.email)
+        .outerjoin(User, AuditLog.user_id == User.id)
         .order_by(AuditLog.created_at.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
     )
     result = await db.execute(query)
-    logs = result.scalars().all()
+    rows = result.all()
 
     data = [
         {
             "id": str(log.id),
             "user_id": str(log.user_id) if log.user_id else None,
+            "user_email": email or "",
             "action": log.action,
-            "resource_type": log.resource_type,
-            "resource_id": log.resource_id,
-            "detail": log.detail,
+            "entity_type": log.resource_type or "",
+            "entity_id": log.resource_id or "",
+            "details": log.detail,
             "created_at": log.created_at.isoformat() if log.created_at else None,
         }
-        for log in logs
+        for log, email in rows
     ]
 
     return ApiResponse(

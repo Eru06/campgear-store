@@ -1,6 +1,6 @@
 // Enums
 export type Role = 'admin' | 'customer';
-export type OrderStatus = 'pending_payment' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending_payment' | 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
 // Auth
 export interface TokenResponse {

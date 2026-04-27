@@ -26,6 +26,23 @@ CATEGORIES = [
     {"name": "Furniture", "slug": "furniture", "description": "Chairs, tables, and hammocks"},
 ]
 
+PRODUCT_IMAGES = {
+    "trailmaster-2-person-tent": "/images/products/trailmaster-2-person-tent.jpg",
+    "basecamp-4-person-family-tent": "/images/products/basecamp-4-person-family-tent.jpg",
+    "summit-pro-ultralight-tent": "/images/products/summit-pro-ultralight-tent.jpg",
+    "arctic-night-minus10-sleeping-bag": "/images/products/arctic-night-sleeping-bag.jpg",
+    "summer-breeze-sleeping-bag": "/images/products/summer-breeze-sleeping-bag.jpg",
+    "expedition-65l-backpack": "/images/products/expedition-65l-backpack.jpg",
+    "daytripper-25l-pack": "/images/products/daytripper-25l-pack.jpg",
+    "jetboil-compact-stove": "/images/products/jetboil-compact-stove.jpg",
+    "campchef-cast-iron-skillet": "/images/products/campchef-cast-iron-skillet.jpg",
+    "titanium-spork-set-4pack": "/images/products/titanium-spork-set.jpg",
+    "lumibeam-600-headlamp": "/images/products/lumibeam-600-headlamp.jpg",
+    "solar-lantern-pro": "/images/products/solar-lantern-pro.jpg",
+    "packlite-camp-chair": "/images/products/packlite-camp-chair.jpg",
+    "treehugger-hammock": "/images/products/treehugger-hammock.jpg",
+}
+
 PRODUCTS = [
     # Tents
     {
@@ -186,11 +203,20 @@ async def seed():
 
         await session.flush()
 
-        # Create products
+        # Create products and images
         for prod_data in PRODUCTS:
             cat_slug = prod_data.pop("category_slug")
+            slug = prod_data["slug"]
             product = Product(category_id=cat_map[cat_slug].id, **prod_data)
             session.add(product)
+            await session.flush()
+            if slug in PRODUCT_IMAGES:
+                image = ProductImage(
+                    product_id=product.id,
+                    url=PRODUCT_IMAGES[slug],
+                    alt_text=prod_data["name"],
+                )
+                session.add(image)
 
         await session.commit()
         print("Seed data created successfully!")

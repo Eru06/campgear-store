@@ -1,18 +1,20 @@
 import { useApi } from '../../hooks/useApi';
 import { Link } from 'react-router-dom';
-import type { PaginatedOrders, OrderStatus } from '../../types';
+import type { PaginatedOrders } from '../../types';
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   pending_payment: 'Pending Payment',
-  confirmed: 'Confirmed',
+  placed: 'Placed',
+  processing: 'Processing',
   shipped: 'Shipped',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
+const STATUS_COLORS: Record<string, string> = {
   pending_payment: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-  confirmed: 'bg-blue-50 border-blue-200 text-blue-800',
+  placed: 'bg-blue-50 border-blue-200 text-blue-800',
+  processing: 'bg-indigo-50 border-indigo-200 text-indigo-800',
   shipped: 'bg-purple-50 border-purple-200 text-purple-800',
   delivered: 'bg-green-50 border-green-200 text-green-800',
   cancelled: 'bg-red-50 border-red-200 text-red-800',
@@ -37,7 +39,7 @@ export default function AdminDashboard() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            {(Object.keys(STATUS_LABELS) as OrderStatus[]).map((status) => (
+            {Object.keys(STATUS_LABELS).map((status) => (
               <div key={status} className={`border rounded-lg p-4 ${STATUS_COLORS[status]}`}>
                 <p className="text-2xl font-bold">{statusCounts[status] || 0}</p>
                 <p className="text-sm">{STATUS_LABELS[status]}</p>
@@ -71,7 +73,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        STATUS_COLORS[order.status].replace('bg-', 'bg-').replace('border-', '')
+                        (STATUS_COLORS[order.status] ?? 'bg-gray-50 border-gray-200 text-gray-800').replace('bg-', 'bg-').replace('border-', '')
                       }`}>
                         {STATUS_LABELS[order.status]}
                       </span>

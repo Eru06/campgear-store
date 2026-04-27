@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api, ApiError } from '../../api/client';
 import type { PaginatedProducts, ProductDetail, ProductCreate, ProductUpdate, CategoryResponse } from '../../types';
 
@@ -14,6 +14,8 @@ export default function AdminProducts() {
   const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', stock: '', category_id: '', is_active: true });
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProducts = () => {
     setLoading(true);
@@ -81,6 +83,32 @@ export default function AdminProducts() {
     fetchProducts();
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editing || !e.target.files?.[0]) return;
+    setUploadingImage(true);
+    try {
+      // Delete existing images first (replace semantics)
+      for (const img of editing.images ?? []) {
+        await fetch(`/api/v1/products/${editing.id}/images/${img.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        });
+      }
+      const formData = new FormData();
+      formData.append('file', e.target.files[0]);
+      await fetch(`/api/v1/products/${editing.id}/images`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        body: formData,
+      });
+      const updated = await api<ProductDetail>(`/products/${editing.slug}`);
+      setEditing(updated);
+    } catch { /* */ } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const autoSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
   return (
@@ -106,6 +134,7 @@ export default function AdminProducts() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
+                  <th className="px-4 py-3">Image</th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3">Price</th>
@@ -117,6 +146,13 @@ export default function AdminProducts() {
               <tbody className="divide-y">
                 {products?.items.map((p) => (
                   <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      {p.thumbnail ? (
+                        <img src={p.thumbnail} alt={p.name} className="w-12 h-10 object-cover rounded" />
+                      ) : (
+                        <div className="w-12 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">No img</div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium">{p.name}</td>
                     <td className="px-4 py-3 text-gray-600">{p.category.name}</td>
                     <td className="px-4 py-3">${Number(p.price).toFixed(2)}</td>
@@ -181,6 +217,23 @@ export default function AdminProducts() {
                 Active
               </label>
             </div>
+            {editing && (
+              <div className="mt-4 border-t pt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Product Image</p>
+                {editing.images?.[0] && (
+                  <img src={editing.images[0].url} alt={editing.name}
+                    className="w-32 h-24 object-cover rounded border mb-2" />
+                )}
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageUpload} className="hidden" />
+                <button type="button" onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="text-sm px-3 py-1.5 border rounded hover:bg-gray-50 disabled:opacity-50">
+                  {uploadingImage ? 'Uploading...' : editing.images?.[0] ? 'Replace Image' : 'Upload Image'}
+                </button>
+              </div>
+            )}
+
             <div className="mt-4 flex justify-end gap-3">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 border rounded text-sm">Cancel</button>
               <button onClick={handleSave} disabled={saving}

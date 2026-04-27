@@ -4,7 +4,8 @@ import type { OrderResponse, OrderStatus } from '../types';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending_payment: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
+  placed: 'bg-blue-100 text-blue-800',
+  processing: 'bg-indigo-100 text-indigo-800',
   shipped: 'bg-purple-100 text-purple-800',
   delivered: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
@@ -12,13 +13,14 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending_payment: 'Pending Payment',
-  confirmed: 'Confirmed',
+  placed: 'Placed',
+  processing: 'Processing',
   shipped: 'Shipped',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
 
-const STATUS_STEPS: OrderStatus[] = ['pending_payment', 'confirmed', 'shipped', 'delivered'];
+const STATUS_STEPS: OrderStatus[] = ['pending_payment', 'placed', 'processing', 'shipped', 'delivered'];
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
